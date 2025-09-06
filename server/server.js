@@ -32,33 +32,33 @@ const Message = require("../modals/message_modal");
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  // Listen for messages
-  socket.on("sendMessage", (data) => {
-    console.log("Message received:", data);
-
-    // Save message to DB (MongoDB)
-    const newMessage = new Message({
-        senderId: data.senderId,
-       receiverId: data.receiverId,
-        message: data.message,
-        timestamp: new Date(),
-      });
-    newMessage.save();
-
-    // Broadcast message to receiver
-    io.to(data.reciverId).emit("receiveMessage", newMessage);
-  });
-
-  // Join room with userId (for private chat)
+  // Join user room
   socket.on("join", (userId) => {
     socket.join(userId);
     console.log("User joined room:", userId);
+  });
+
+  // Send message
+  socket.on("sendMessage", (data) => {
+    console.log("Message received:", data);
+
+    const newMessage = new Message({
+      senderId: data.senderId,
+      receiverId: data.receiverId,
+      message: data.message,
+      timestamp: new Date(),
+    });
+
+    newMessage.save().then((msg) => {
+      io.to(data.receiverId).emit("receiveMessage", msg);
+    });
   });
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
   });
 });
+
 
 
 
@@ -77,7 +77,7 @@ app.use("/api/message", require("../routes/message"));
 
 
 
-
+  
 //server listening
 
  const PORT = process.env.PORT || 5001;
