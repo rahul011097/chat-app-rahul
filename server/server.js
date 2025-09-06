@@ -1,8 +1,10 @@
+require('dotenv').config();
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
-const moongoose = require("mongoose");
+const mongoose = require("mongoose");
 const {Server} = require("socket.io");
+
 
 const app = express();
 const server = http.createServer(app);
@@ -12,9 +14,10 @@ app.use(cors());
 app.use(express.json());
 
 //database connection
-moongoose.connect(
-  "mongodb+srv://softhuntersrahulkumar_db_user:FHewlCrDouFfozVe@cluster0.e0hokua.mongodb.net/chat-app"
-).then(() => console.log("DB connected"))
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => console.log("DB connected"))
   .catch((err) => console.log(err));
 
 //socket.io connection
@@ -77,7 +80,9 @@ app.use("/api/message", require("../routes/message"));
 
 //server listening
 
-  server.listen(5001,'0.0.0.0', () => {
-    console.log("Server is running on port 5001");
-  });
+ const PORT = process.env.PORT || 5001;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
 
