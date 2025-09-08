@@ -17,6 +17,12 @@ app.use(express.json());
 
 const users = {};
 
+
+function getUserIdFromSocket(socketId) {
+  return Object.keys(users).find((key) => users[key] === socketId);
+}
+
+
 //database connection
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
@@ -37,12 +43,14 @@ io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   // Join user room
-  socket.on("join", (userId) => {
-    socket.join(userId);
-     users[userId] = socket.id; // active users map
+socket.on("join", (userId) => {
+  if (!userId) return;
+
+  socket.join(userId);
+  users[userId] = socket.id; // active users map
   io.emit("user_online", { userId });
-    console.log("User joined room:", userId);
-  });
+  console.log("User joined room:", userId);
+});
 
   // -------------------
   // 📩 Send Message Flow
@@ -121,12 +129,14 @@ socket.on("stop_typing", (data) => {
 });
 
 
-  socket.on("disconnect", () => {
-    const userId = getUserIdFromSocket(socket.id);
-  delete users[userId];
-  io.emit("user_offline", { userId, lastSeen: new Date() });
-    console.log("User disconnected:", socket.id);
-  });
+socket.on("disconnect", () => {
+  const userId = getUserIdFromSocket(socket.id);
+  if (userId) {
+    delete users[userId];
+    io.emit("user_offline", { userId, lastSeen: new Date() });
+    console.log("User disconnected:", socket.id, "->", userId);
+  }
+});
 });
 
 
