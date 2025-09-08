@@ -69,11 +69,13 @@ socket.on("join", (userId) => {
     try {
       const msg = await newMessage.save();
 
-      // Ack to sender (SENT)
-      socket.emit("message_sent", { messageId: msg._id });
+     socket.emit("message_sent", {
+      localId: data.id,   // 👈 return local id for matching
+      messageId: msg._id  // 👈 DB id
+    });
 
-      // Emit to receiver
-      io.to(data.receiverId).emit("receive_message", msg);
+    // Emit to receiver
+    io.to(data.receiverId).emit("receive_message", msg);
 
     } catch (err) {
       console.error("Error saving message:", err);
@@ -84,27 +86,15 @@ socket.on("join", (userId) => {
   // ✅ Delivered
   // -------------------
   socket.on("message_delivered", async (data) => {
-    console.log("Delivered:", data);
+  await Message.findByIdAndUpdate(data.messageId, { status: "delivered" });
+  io.to(data.senderId).emit("message_delivered", { messageId: data.messageId });
+});
 
-    // Update DB
-    await Message.findByIdAndUpdate(data.messageId, { status: "delivered" });
+socket.on("message_seen", async (data) => {
+  await Message.findByIdAndUpdate(data.messageId, { status: "seen" });
+  io.to(data.senderId).emit("message_seen", { messageId: data.messageId });
+});
 
-    // Notify sender
-    io.to(data.senderId).emit("message_delivered", { messageId: data.messageId });
-  });
-
-  // -------------------
-  // 👀 Seen
-  // -------------------
-  socket.on("message_seen", async (data) => {
-    console.log("Seen:", data);
-
-    // Update DB
-    await Message.findByIdAndUpdate(data.messageId, { status: "seen" });
-
-    // Notify sender
-    io.to(data.senderId).emit("message_seen", { messageId: data.messageId });
-  });
 
   // 🔵 User Typing
 socket.on("typing", (data) => {
