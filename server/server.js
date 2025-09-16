@@ -96,7 +96,7 @@ socket.on("join", (userId) => {
       message: data.message,
       status: "sent", // 👈 default status
       timestamp: new Date(),
-      senderName: sender.userName // 👈 sender's name
+      senderName: sender.username // 👈 sender's name
     });
 
     try {
@@ -117,7 +117,7 @@ socket.on("join", (userId) => {
           const message = {
             token: receiver.device_token,
             notification: {
-              title: sender.userName,
+              title: sender.username,
               body: data.message,
             },
             data: {
