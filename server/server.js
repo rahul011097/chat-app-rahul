@@ -79,6 +79,9 @@ socket.on("join", (userId) => {
   // -------------------
   // 📩 Send Message Flow
   // -------------------
+
+  const User = require("../modals/user_modal");
+
   socket.on("sendMessage", async (data) => {
     console.log("Message received:", data);
 
@@ -100,6 +103,34 @@ socket.on("join", (userId) => {
 
     // Emit to receiver
     io.to(data.receiverId).emit("receive_message", msg);
+
+     (async () => {
+      try {
+        const receiver = await User.findOne({ userId: data.receiverId });
+
+        if (receiver?.device_token) {
+          const message = {
+            token: receiver.device_token,
+            notification: {
+              title: "New Message",
+              body: data.message,
+            },
+            data: {
+              senderId: data.senderId.toString(),
+              receiverId: data.receiverId.toString(),
+              messageId: msg._id.toString(),
+            },
+          };
+
+          const response = await admin.messaging().send(message);
+          console.log("✅ Notification sent:", response);
+        } else {
+          console.log("⚠️ No device token found for userId", data.receiverId);
+        }
+      } catch (err) {
+        console.error("❌ Notification error:", err);
+      }
+    })();
 
     } catch (err) {
       console.error("Error saving message:", err);
