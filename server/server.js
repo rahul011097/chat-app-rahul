@@ -4,6 +4,13 @@ const http = require("http");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const {Server} = require("socket.io");
+const admin = require("firebase-admin");
+const serviceAccount = require("../firebase/serviceAccountKey.json");
+
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
 
 const app = express();
@@ -21,6 +28,8 @@ const users = {};
 function getUserIdFromSocket(socketId) {
   return Object.keys(users).find((key) => users[key] === socketId);
 }
+
+
 
 
 //database connection
@@ -41,6 +50,8 @@ const Message = require("../modals/message_modal");
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
+
+
 
   // Join user room
 socket.on("join", (userId) => {
