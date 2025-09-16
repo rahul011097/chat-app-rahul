@@ -108,7 +108,7 @@ socket.on("join", (userId) => {
   // });
 
 
-  const User = require("../modals/user_modal");
+const User = require("../modals/user_modal");
 
 socket.on("sendMessage", async (data) => {
   console.log("Message received:", data);
@@ -124,41 +124,48 @@ socket.on("sendMessage", async (data) => {
   try {
     const msg = await newMessage.save();
 
+    // ✅ sender ko confirm karo
     socket.emit("message_sent", {
       localId: data.id,
       messageId: msg._id,
     });
 
-    // Emit to receiver via socket
+    // ✅ receiver ko socket se real-time message bhejo
     io.to(data.receiverId).emit("receive_message", msg);
 
-    // ✅ Fetch receiver by custom userId
-    const receiver = await User.findOne({ userId: data.receiverId });
+    // ✅ Notification ko alag se async fire karo
+    (async () => {
+      try {
+        const receiver = await User.findOne({ userId: data.receiverId });
 
-    if (receiver && receiver.device_token) {
-      const message = {
-        token: receiver.device_token,
-        notification: {
-          title: "New Message",
-          body: data.message,
-        },
-        data: {
-          senderId: data.senderId.toString(),
-          receiverId: data.receiverId.toString(),
-          messageId: msg._id.toString(),
-        },
-      };
+        if (receiver?.device_token) {
+          const message = {
+            token: receiver.device_token,
+            notification: {
+              title: "New Message",
+              body: data.message,
+            },
+            data: {
+              senderId: data.senderId.toString(),
+              receiverId: data.receiverId.toString(),
+              messageId: msg._id.toString(),
+            },
+          };
 
-      const response = await admin.messaging().send(message);
-      console.log("✅ Notification sent:", response);
-    } else {
-      console.log("⚠️ No device token found for userId", data.receiverId);
-    }
+          const response = await admin.messaging().send(message);
+          console.log("✅ Notification sent:", response);
+        } else {
+          console.log("⚠️ No device token found for userId", data.receiverId);
+        }
+      } catch (err) {
+        console.error("❌ Notification error:", err);
+      }
+    })();
+
   } catch (err) {
     console.error("Error saving message:", err);
   }
 });
-
 
 
   // -------------------
