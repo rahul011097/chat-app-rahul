@@ -79,32 +79,87 @@ socket.on("join", (userId) => {
   // -------------------
   // 📩 Send Message Flow
   // -------------------
-  socket.on("sendMessage", async (data) => {
-    console.log("Message received:", data);
 
-    const newMessage = new Message({
-      senderId: data.senderId,
-      receiverId: data.receiverId,
-      message: data.message,
-      status: "sent", // 👈 default status
-      timestamp: new Date(),
+  // socket.on("sendMessage", async (data) => {
+  //   console.log("Message received:", data);
+
+  //   const newMessage = new Message({
+  //     senderId: data.senderId,
+  //     receiverId: data.receiverId,
+  //     message: data.message,
+  //     status: "sent", // 👈 default status
+  //     timestamp: new Date(),
+  //   });
+
+  //   try {
+  //     const msg = await newMessage.save();
+
+  //    socket.emit("message_sent", {
+  //     localId: data.id,   // 👈 return local id for matching
+  //     messageId: msg._id  // 👈 DB id
+  //   });
+
+  //   // Emit to receiver
+  //   io.to(data.receiverId).emit("receive_message", msg);
+
+  //   } catch (err) {
+  //     console.error("Error saving message:", err);
+  //   }
+  // });
+
+
+  const User = require("../modals/user_modal");
+
+socket.on("sendMessage", async (data) => {
+  console.log("Message received:", data);
+
+  const newMessage = new Message({
+    senderId: data.senderId,
+    receiverId: data.receiverId,
+    message: data.message,
+    status: "sent",
+    timestamp: new Date(),
+  });
+
+  try {
+    const msg = await newMessage.save();
+
+    socket.emit("message_sent", {
+      localId: data.id,
+      messageId: msg._id,
     });
 
-    try {
-      const msg = await newMessage.save();
-
-     socket.emit("message_sent", {
-      localId: data.id,   // 👈 return local id for matching
-      messageId: msg._id  // 👈 DB id
-    });
-
-    // Emit to receiver
+    // Emit to receiver via socket
     io.to(data.receiverId).emit("receive_message", msg);
 
-    } catch (err) {
-      console.error("Error saving message:", err);
+    // ✅ Fetch receiver by custom userId
+    const receiver = await User.findOne({ userId: data.receiverId });
+
+    if (receiver && receiver.device_token) {
+      const message = {
+        token: receiver.device_token,
+        notification: {
+          title: "New Message",
+          body: data.message,
+        },
+        data: {
+          senderId: data.senderId.toString(),
+          receiverId: data.receiverId.toString(),
+          messageId: msg._id.toString(),
+        },
+      };
+
+      const response = await admin.messaging().send(message);
+      console.log("✅ Notification sent:", response);
+    } else {
+      console.log("⚠️ No device token found for userId", data.receiverId);
     }
-  });
+  } catch (err) {
+    console.error("Error saving message:", err);
+  }
+});
+
+
 
   // -------------------
   // ✅ Delivered
