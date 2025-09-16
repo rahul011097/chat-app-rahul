@@ -85,12 +85,18 @@ socket.on("join", (userId) => {
   socket.on("sendMessage", async (data) => {
     console.log("Message received:", data);
 
+    const sender = await User.findOne({ userId: Number(data.senderId) });
+    if (!sender) {
+      return res.status(404).json({ status: false, message: "Sender not found" });
+    }
+
     const newMessage = new Message({
       senderId: data.senderId,
       receiverId: data.receiverId,
       message: data.message,
       status: "sent", // 👈 default status
       timestamp: new Date(),
+      senderName: sender.senderName // 👈 sender's name
     });
 
     try {
@@ -103,7 +109,6 @@ socket.on("join", (userId) => {
 
     // Emit to receiver
     io.to(data.receiverId).emit("receive_message", msg);
-
      (async () => {
       try {
         const receiver = await User.findOne({ userId: data.receiverId });
@@ -112,7 +117,7 @@ socket.on("join", (userId) => {
           const message = {
             token: receiver.device_token,
             notification: {
-              title: data.senderName,
+              title: sender.senderName,
               body: data.message,
             },
             data: {
