@@ -112,7 +112,7 @@ socket.on("join", (userId) => {
           const message = {
             token: receiver.device_token,
             notification: {
-              title: "${data.senderName}",
+              title: data.senderName,
               body: data.message,
             },
             data: {
