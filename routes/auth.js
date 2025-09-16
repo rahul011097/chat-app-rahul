@@ -53,7 +53,7 @@ router.post('/register', async (req, res) => {
 
 // Login route
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password,device_token} = req.body;
 
     try {
         // Check if user exists
@@ -67,10 +67,18 @@ router.post('/login', async (req, res) => {
         if (!isMatch) {
             return res.status(400).json({ message: 'Invalid credentials' , status   : false});
         }
+        if(device_token==null || device_token==undefined){
+          return res.status(400).json({ message: 'Device Token is required' , status   : false});
+        }
+
+        if(device_token && device_token.trim() !=""){
+          user.device_token = device_token.trim();
+          await user.save();
+        }
 
         // Create and assign a token
         const token = jwt.sign({ id: user._id }, 'rahulKaPalhaBackend', { expiresIn: '1h' });
-        res.status(200).json({ token, user: { id: user._id, username: user.username, email: user.email , userId:user.userId } , status   : true});
+        res.status(200).json({ token, user: { id: user._id, username: user.username, email: user.email , userId:user.userId } , status: true});
     } catch (error) {
         res.status(500).json({ error: error.message , status   : false});
     }
